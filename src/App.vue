@@ -2,21 +2,19 @@
   <main class="main-content">
     <h1>Escalonador</h1>
 
-    <div class="music">
-      <audio autoplay controls ref="musicPlayer">
-        <source src="./assets/audio/takeMeThere.mp3" type="audio/mpeg">
-      </audio>
+
+    <div class="loader" ref="loader" id="loader">
+      <img src="./assets/img/loader.svg" alt="loader pacman">
     </div>
   </main>
-  <div class="loader" ref="loader" id="loader">
-    <img src="./assets/img/loader.svg" alt="loader pacman">
-  </div>
 </template>
 
 <script lang="ts">
 
 import { Options, Vue } from 'vue-class-component';
 import HelloWorld from './components/HelloWorld.vue';
+import { Result } from './core/models/result';
+import { Task } from './core/models/task';
 
 @Options({
   components: {
@@ -33,13 +31,132 @@ import HelloWorld from './components/HelloWorld.vue';
       type: String
     }
   },
+  methods: {
+    // Adding a new process to the list of tasks.
+    addNewProcess() {
+      let task: Task = {
+        id: this.tasks.length + 1,
+        name: this.name,
+        priority: this.priority,
+        time: this.time,
+        result: 0
+      }
+      this.tasks.push(task)
+      this.clearForm();
+    },
+    // A method that clears the form.
+    clearForm() {
+      this.name = ''
+      this.priority = this.tempo = 1;
+    },
+    // This method is responsible for updating the total time of the process.
+    updateTotalTime(method: string, total: number) {
+      let med = (total / this.tarefa.length).toFixed(2)
+      let result: Result = {
+        method: method,
+        totalTime: total,
+        medium: Number(med)
+      }
+      if (result) {
+        this.results.push(result)
+      }
+    },
+    // Sorting the tasks by id and resetting the result to 0.
+    restartList() {
+      this.tasks.sort((a: Task, b: Task) => {
+        console.log('O a ', a);
+        return Number(a.id) - Number(b.id)
+
+      })
+      this.tasks.forEach((e: Task) => {
+        e.result = 0;
+      })
+    },
+    // This method is responsible for calculating the total time of the process.
+    fifoAlg(reorder: boolean) {
+      if (reorder) this.restartList()
+      let time = 0;
+      let total = 0;
+      this.tasks.forEach((t: Task) => {
+        time += t.time
+        t.result = time
+        total += t.time
+      })
+      if (reorder) {
+
+        this.restartList('FIFO', total)
+      }
+      else {
+        return total
+      }
+      // reorder ? this.restartList('FIFO', total) : total;
+    },
+    // This method is responsible for sorting the tasks by time and then calculating the total time of
+    // the process.
+    smallerFirst() {
+      this.restartList()
+      this.tasks.sort((a: Task, b: Task) => {
+        return a.time - b.time
+      })
+      // let total = this.fifoAlg(false)
+      this.updateTotalTime('SMALLER', this.fifoAlg(false))
+    },
+    // This method is responsible for sorting the tasks by priority and then calculating the total time of
+    // the process.
+    biggerPriority() {
+      this.restartList()
+      this.tasks.sort((a: Task, b: Task) => {
+        return b.priority - a.priority
+      })
+      this.updateTotalTime('BIGGER', this.fifoAlg(false))
+    },
+    // This method is responsible for sorting the tasks by time and then calculating the total time of
+    // the process.
+    circulation() {
+      this.restartList()
+      let executionRow = this.tasks
+      executionRow.forEach((eR: Task) => {
+        eR.delete = false
+      })
+      let qt = 0;
+      let totalTime = 0;
+      let status = true;
+      while (status) {
+        if (executionRow.length === 0) break
+        executionRow.forEach((eR: Task) => {
+          qt++;
+          eR.result++
+          if (eR.time == eR.result) {
+            this.tasks[eR.id - 1].result = qt
+            eR.delete = true
+          }
+        })
+        executionRow = executionRow.filter((eR: Task) => !eR.delete)
+      }
+      this.tasks.forEach((eR: Task) => totalTime += eR.result)
+      this.updateTotalTime('CIRCULATION', totalTime)
+    },
+    // This method is responsible for calling all the methods that calculate the total time of the process.
+    callAll() {
+      this.tasks = []
+      this.fifoAlg(true)
+      this.smallerFirst();
+      this.biggerPriority();
+      this.circulation();
+      this.results.sort((a: Result, b: Result) => {
+        return a.medium - b.medium
+      })
+
+    }
+  },
   mounted() {
 
 
-    setInterval(() => {
-      const loader = document.getElementById('loader')
-      loader.hidden = true;
-    }, 50)
+    // setInterval(() => {
+    //   const loader = document.getElementById('loader')
+    //   loader.hidden = true;
+    // }, 50)
+    this.restartList();
 
   }
 })
