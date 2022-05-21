@@ -1,9 +1,10 @@
-export interface Task{
+export interface Task {
 
-    id:number
-    name:string,
-    priority:number
+    id: number
+    name: string,
+    priority: number
     time: number
-    result:number
-    delete?:boolean
+    result: number
+    running?: boolean
+    delete?: boolean
 }
